@@ -1,0 +1,322 @@
+---
+title: "Introduction to Text Mining with R:  Examples with Supreme Court Decision Obergefell V Hodges"
+author: "ATLAS-CITL Data Analytics Services"
+output: pdf_document
+---
+
+
+```{r, echo=FALSE, warning=FALSE,message=FALSE}
+library(knitr)
+opts_chunk$set(cache=FALSE)
+```
+
+
+Introduction
+===
+
+This document is aimed to get you started with text mining analysis. We will do the following:
+
+* Loading Packages needed for text manipulation and mining
+* Loading Data (The Supreme Court Decision Obergefell V Hodges)
+* Manipulate Text "Manually" (character strings competency in R)
+* Manipulate Text with tm (text mining) package (more automated)
+* Tabulate word frequencies 
+* Visualize word frequencies with bar plots and wordclouds
+
+
+Load Packages
+=====
+
+First we load the packages that we will use with the library function.  If you haven't already done so, you will also need to install the packages with the install packages function.  
+
+```{r, warning=FALSE, message=FALSE, results='hide',cache=FALSE}
+#install.packages("stringr")
+library(stringr) # a basic package for string (character) manipulation
+#install.packages("ggplot2")
+library(ggplot2) # a useful package for data visualization
+#install.packages("wordcloud")
+library(wordcloud) # visualizes text as word clouds
+#install.packages('tm') 
+library(tm)  # text mining package
+
+```
+
+Loading and exploring the Data
+===
+
+Before analysis in R, we used Adobe Pro to export the Obergefell V Hodges pdf, available at <http://www.supremecourt.gov/opinions/14pdf/14-556_3204.pdf>.  This procedure is not fool proof as optical character recognition may be imperfect.  Ideally, a clean txt source version would be used.
+
+```{r, cache=FALSE}
+OvsHLines=readLines("./SupremeCourt/ObergefellVHodges.txt") # this will read the entire .txt document
+length(OvsHLines) # this will tell you how many lines of text are in the .txt document
+OpinionOVsH=OvsHLines[1:292]  #by inspection, we find where opinion ends and the dissention starts
+
+#We create a new object "OpinionOVsH" in which includes only the lines that contains the opinion
+DissentOVsH=OvsHLines[293:631] #This tell you the lines containing the Dissent
+```
+
+Collapse vector into single character string
+======
+
+Right now, these objects are character vectors containing each line of the opinion.  We collapse these lines into one character string, overwriting the object OpinionOVsH.
+
+```{r, cache=FALSE}
+OpinionOVsH=paste(OpinionOVsH, collapse=" ") 
+length(OpinionOVsH)  #now it is just a long character string - the vector's length is 1
+
+#When the line wraps in the PDF, a dash is used to split words.  
+#Now where there are dashes and a space, the word should be joined.
+OpinionOVsH=replace(OpinionOVsH, "- ", "") 
+
+#Preview first characters
+str_sub(OpinionOVsH, 1,70)#Check out the first 70 characters of OpinionOVsH
+```
+
+
+"Manually" cleaning and counting frequencies
+====
+
+To clean up and count frequencies of texts, we rely on base r functions and the stringr package (loaded above). The stringr package will give you increased familiarity with how to manipulate strings in general.  For comprehensive information on the stringr package, visit <http://cran.r-project.org/web/packages/stringr/stringr.pdf>. In this section we'll work only with the court opinion character string.
+
+Convert uppercase to lower case
+------
+
+Converting the words to just one case allows us to count the frequency of a word no matter what case it is in. We use the function tolower for that purpose.
+
+```{r}
+OpinionOVsH=tolower(OpinionOVsH)
+str_sub(OpinionOVsH, 1,70) # Check out the first 70 characters of OpinionOVsH
+```
+
+
+Remove most punctuation from each response
+-----
+
+For the most part we are not interested in punctuation so we will remove it. We use the function str_replace_all and the following syntax to remove punctuation from texts.
+
+```{r}
+# Remove Punctuation
+OpinionOVsH=str_replace_all(OpinionOVsH, '([[]\\?!\"\'#$%&(){}+*/:;,._`|~\\[<=>@\\^-]])', "")
+
+str_sub(OpinionOVsH, 1,70) # Check out the first 70 characters of OpinionOVsH
+
+```
+
+Split the long character string
+--------
+
+Notice that we have overwrote OpinionOVsH and it is currently our main input for text changes. Now we split up this character string in to a vector of individual words. Then we check the number of elements in the new vector that has been created.
+
+```{r}
+vector_OpinionOVsH=str_split(OpinionOVsH   ," ")[[1]] # Split at spaces into a vector of words
+vector_OpinionOVsH=vector_OpinionOVsH[vector_OpinionOVsH!=""] # Remove empty character strings
+length(vector_OpinionOVsH) # We check how many elements are created by the split
+vector_OpinionOVsH[1:20]
+
+```
+
+Count frequency
+--------
+Using the table function, we count the frequency of the occurence of each word.
+
+```{r}
+opinion_table=sort(table(vector_OpinionOVsH), decreasing=TRUE) 
+opinion_table[1:10]
+
+
+```
+
+
+
+Barplots for most frequently occuring words
+=======
+
+We might also want to simply create some bar plots of the most common words.  However, we might like to focus on high content words, so we remove low content words first. These low content words are sometimes called stop words. You can add your own words to this list.  
+
+Removing Low Content Words (Stop Words)
+-----
+
+```{r}
+LowContentWords=c( "not", "the","to" ,"and" ,"of", "a", 
+                  "i", "in", "for", "be", "my","there","could",
+                  "it" , "have", "is","that",  "on", "by", 
+                  "was", "would", "this", "with", "some", "will", "their",
+                  "when", "then", "during", "who", "may", "had",
+                  "were","from","they", "but", "as","or", "so", "at", letters,
+                  0:9)
+
+#Delete Low Content words
+vector_OpinionOVsH_HighContent=vector_OpinionOVsH[
+  !(vector_OpinionOVsH %in% LowContentWords)]
+```
+
+Plotting frequencies of the most frequent high content words
+------
+Now we are ready to plot the frequencies of the most common words. 
+
+```{r, dev.args=list(pointsize=10, family='serif')}
+HighContentFreq=sort(table(vector_OpinionOVsH_HighContent), decreasing=TRUE) 
+
+barplot(head(HighContentFreq), las=1, cex.names=.8,
+ylab="Word Frequency")
+
+```
+
+
+With these frequencies (obect HighContentFreq) you can also create a wordcloud.  Wordclouds are a way to quickly visualize the relative frequencies of words in a text. Below we show how you might accomplish this with the court opinion.
+
+```{r, cache=FALSE, warning=FALSE, message=FALSE}
+
+#Now observe that in the word cloud produced, these low content words do not appear
+set.seed(123456)
+wordcloud(words = names(HighContentFreq), 
+          freq = HighContentFreq, 
+          min.freq = 10)
+
+```
+
+Use word cloud package (automatic)
+=========
+
+The word cloud package can be used on a block of text in which it automatically counts word frequencies. However, we have to include the low content words previously removed. We show an example with the text from the dissent.
+
+
+Word Cloud for dissent:
+------
+
+We also create the word cloud for the dissent. 
+
+```{r, cache=FALSE, warning=FALSE, message=FALSE}
+
+#Dissent
+set.seed(123456)
+wordcloud(DissentOVsH, min.freq = 15)
+
+```
+
+
+Zipf's Law
+=======
+
+Now we work through an example to do a classic text analysis.  Zipf's law states that a word's frequency is inversely proportional to it's rank in the frequency table.  The ranks verses frequency are typically plotted after first taking the log of both.  
+
+Now we look to see if Zipf's law is followed in the Court Opinion. We use the package ggplot2, which first requires that our word, frequency, and ranks be in a data frame. Below we see that the Court's Opinion does follow the pattern the Zipf identified. 
+
+```{r, warning=FALSE, dev.args=list(pointsize=10, family='serif')}
+#combine word, rank and frequency into a dataframe
+RankAndFreq=data.frame(word=names(opinion_table), 
+                       rank=1:length(opinion_table), 
+                       freq=opinion_table)
+head(RankAndFreq)
+
+p <- ggplot(RankAndFreq, aes(x=rank, y=freq, label=word))
+p + geom_text(size=3) +scale_x_log10()+scale_y_log10()
+
+```
+
+
+Using the text mining (tm) package
+====
+
+The text mining package is loaded above.  It facilitates data cleaning and analysis - especially across different texts.  However, tm is a bit more cumbersome to use as it stores much information about texts.  
+
+
+```{r, cache=FALSE}
+OvsHLines=readLines("./SupremeCourt/ObergefellVHodges.txt") # will read the entire document
+OpinionOVsH=OvsHLines[1:292]  # Will find where opinion ends in the txt doccument
+DissentOVsH=OvsHLines[293:length(OvsHLines)] # will identify the lines containing the Dissent
+```
+
+Collapse vector into single character string
+----
+
+```{r, cache=FALSE}
+
+#Right now, these objects are character vectors containing each line of the opinion
+#We collapse these lines into one character string, overwriting the object.
+OpinionOVsH=paste(OpinionOVsH, collapse=" ") 
+DissentOVsH=paste(DissentOVsH, collapse=" ") 
+
+#When the line wraps in the PDF, a dash is used to split words.  
+#Now where there are dashes and a space, the word should be joined.
+OpinionOVsH=replace(OpinionOVsH, "- ", "") 
+DissentOVsH=replace(DissentOVsH, "- ", "") 
+```
+
+Create a corpus
+----
+
+The text miner package allows association of multiple documents into a single corpus. 
+
+```{r}
+Opinion_source=VectorSource(OpinionOVsH)
+Dissent_source=VectorSource(DissentOVsH)
+corpus <- Corpus(Opinion_source)
+```
+
+Looking at how the character string is transformed using the tm package is a little more difficult once the data is in the corpus. First we use the elements of the corpus using the structure function.  A lot of information can be stored with the text itself - such as author, language, etc. 
+
+```{r}
+str(corpus)
+```
+
+Now we see how to point to the text itself. 
+
+```{r}
+#The code ----  "as.character(corpus[[1]][1])"" ---- prints the entire string
+#We'll only look at the first 70 characters
+str_sub(as.character(corpus[[1]]),1,70)
+
+```
+
+
+Cleaning Data
+---
+
+Cleaning data is an easy process using the text miner package. For comprehensive information on this package, visit, <http://cran.r-project.org/web/packages/tm/tm.pdf>.
+
+
+```{r}
+#transforming words in corpus to lower case
+corpus <- tm_map(corpus, content_transformer(tolower))
+#Let's look at the result of the transformation
+str_sub(as.character(corpus[[1]]),1,70)
+
+
+#removing punctuation from corpus
+corpus <- tm_map(corpus, removePunctuation)
+#Let's look at the result of the transformation
+str_sub(as.character(corpus[[1]]),1,70)
+
+
+#remove low content words
+
+stopwords("english")[1:40]  #we have a look at what some of those predefined words are
+corpus <- tm_map(corpus, removeWords, stopwords("english"))#removing them
+#Let's look at the result of the transformation
+str_sub(as.character(corpus[[1]]),1,70)
+
+#remove white spaces
+corpus <- tm_map(corpus, stripWhitespace)
+#Let's look at the result of the transformation
+str_sub(as.character(corpus[[1]]),1,70)
+
+```
+
+Collecting and reporting word frequencies
+----------------------
+
+```{r, dev.args=list(pointsize=10, family='serif')}
+dtm <- DocumentTermMatrix(corpus)
+dtm2 <- as.matrix(dtm)
+frequency <- colSums(dtm2)
+frequency <- sort(frequency, decreasing=TRUE)
+
+barplot(frequency[1:6], 
+        las=2, #orientation of axis labels
+        cex.names = .9, #size of text names
+        main="Most frequent words used in Supreme Court opinion")
+
+```
+
+

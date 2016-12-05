@@ -1,0 +1,69 @@
+---
+title: "SCOTUS Database Network"
+author: "Gina Reynolds"
+date: "Tuesday, June 30, 2015"
+output: pdf_document
+---
+
+Data is from <http://supremecourtdatabase.org/data.php>
+
+
+```{r}
+# list.files()
+# load("SCDB_2014_01_caseCentered_Citation.Rdata")
+# ls()
+# data=SCDB_2014_01_caseCentered_Citation
+# names(data)
+# head(data)
+library(knitr)
+opts_chunk$set(cache=TRUE)
+```
+
+```{r}
+list.files()
+load("SCDB_2014_01_justiceCentered_Citation.Rdata")
+ls()
+data=SCDB_2014_01_justiceCentered_Citation
+names(data)
+str(data)
+attach(data)
+head(data[c("opinion","justiceName", "caseId")])
+
+
+
+uniqueJustices=unique(justiceName)
+head(uniqueJustices);tail(uniqueJustices)
+numJustices=length(uniqueJustices);numJustices
+
+uniqueCases=unique(caseId)
+head(uniqueCases);tail(uniqueCases)
+numCases=length(uniqueCases);numCases
+
+#create empty matrix
+JusticeCaseMatrix=matrix(rep(NA, numJustices*numCases), nrow=numCases, dimnames = list(uniqueCases, uniqueJustices))
+
+
+#populate matrix
+for (i in 1:numJustices){
+  
+  Temp=data[data$justiceName==uniqueJustices[i],]
+  
+  SubsetUniqueCases=unique(Temp$caseId)
+  SubsetNumCases=length(SubsetUniqueCases)
+  
+  
+    for (j in 1:SubsetNumCases){    
+      
+      if(length(Temp$opinion[data$caseId==SubsetUniqueCases[j]])>0){
+
+          JusticeCaseMatrix[ SubsetUniqueCases[j], uniqueJustices[i] ]=
+                                      Temp$opinion[ Temp$caseId==SubsetUniqueCases[j][1] ]
+                                        }
+      }
+  }
+
+```
+
+```{r}
+JusticeCaseMatrix[1:20,1:6]
+```
